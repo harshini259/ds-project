@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.ds.pubsub.proto";
+
+service LeaderElectionService {
+  rpc GetLeader (EmptyMessage) returns (Leader) {}
+  rpc SendHeartbeat (HeartbeatRequest) returns (HeartbeatResponse) {}
+  rpc RequestVote(VoteRequest) returns (VoteResponse) {}
+}
+
+message Leader {
+  string member_id = 1;
+  string leader_id = 2;
+}
+
+message HeartbeatRequest {
+  bytes term = 1;
+  string member_id = 2;
+}
+
+message HeartbeatResponse {
+  bytes term = 1;
+  string member_id = 2;
+}
+
+
+message VoteRequest {
+  bytes term = 1;
+  string candidate_id = 2;
+}
+
+message VoteResponse {
+  bool granted = 1;
+  string candidate_id = 2;
+}
+
+message EmptyMessage {
+}

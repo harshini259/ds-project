@@ -1,0 +1,10 @@
+app: ds-pubsub
+version: 1.0
+topicDir: /tmp/topics
+nodes:
+  - ip: 10.0.0.95
+    port: 6000
+  - ip: 10.0.0.95
+    port: 6005
+  - ip: 10.0.0.95 
+    port: 6010
