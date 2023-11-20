@@ -102,17 +102,17 @@ public class RaftLeaderElection {
     private Consumer sendHeartbeat() {
         return heartbeat ->
             cluster
-                .getClusterNodes()
+                .getOtherClusterNodes()
                 .forEach(
                     node -> {
-                      logger.debug(
+                      logger.info(
                           "node: [{}] with address [{}:{}] sending heartbeat",
                           node.getId(),
                           node.getIp(),
                           node.getPort());
                       HeartbeatResponse response = this.cluster.sendHeartbeat(node, this.currentTerm.get());
                       if (response == null) {
-                        logger.debug(
+                        logger.info(
                             "Error requesting for heartbeat response from node: {}, address: {}:{}",
                             node.getId(),
                             node.getIp(),
@@ -150,7 +150,7 @@ public class RaftLeaderElection {
                 + " ("
                 + this.currentTerm().toLong()
                 + ") >>>>>>>    +++ Become A Leader +++");
-        leaderScheduler = new JobScheduler((java.util.function.Consumer) leaderIsWorking());
+        leaderScheduler = new JobScheduler(leaderIsWorking());
         leaderScheduler.start(1000);
     }
 
@@ -180,27 +180,28 @@ public class RaftLeaderElection {
 
     private void sendElectionCampaign() {
         CountDownLatch consensus =
-            new CountDownLatch(((this.cluster.getClusterNodes().size() + 1) / 2));
+            new CountDownLatch(((this.cluster.getNodeCount() + 1) / 2));
+        logger.info("Number of nodes: [{}]", ((this.cluster.getNodeCount() + 1) / 2));
         this.cluster
-            .getClusterNodes()
+            .getOtherClusterNodes()
             .forEach(
                 node -> {
-                VoteResponse response = this.cluster.requestVote(node,currentTerm.get());
+                VoteResponse response = this.cluster.requestVote(node, currentTerm.get());
+                logger.info("Vote response: [{}] [{}]", node, response);
                 if (response == null) {
                     logger.debug(
                         "Error requesting for vote response from node: {}, address: {}:{}",
                         node.getId(), node.getIp(), node.getPort());
                 } else {
                     logger.debug("member: [{}] received vote response: [{}].", this.getMemberId(), response);
-                    if (response.getGranted()) {
-                    consensus.countDown();
+                        if (response.getGranted()) {
+                            consensus.countDown();
+                        }
                     }
-                }
                 });
         try {
         boolean countZero = consensus.await(5, TimeUnit.SECONDS);
         stateMachine.transition(State.LEADER, currentTerm);
-
         } catch (InterruptedException e) {
         stateMachine.transition(State.FOLLOWER, currentTerm);
         }
@@ -224,7 +225,7 @@ public class RaftLeaderElection {
 
 
     public HeartbeatResponse handleSendHeartBeat(HeartbeatRequest request) {
-        logger.debug("member [{}] received heartbeat request: [{}]", this.getMemberId(), request);
+        logger.info("member [{}] received heartbeat request: [{}]", this.getMemberId(), request);
         restTimeoutScheduler();
 
         LogicalTimestamp term = LogicalTimestamp.fromBytes(request.getTerm().toByteArray());

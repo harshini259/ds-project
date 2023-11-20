@@ -2,20 +2,22 @@ package com.ds.pubsub.server;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.time.Duration;
 
 import com.ds.pubsub.common.Config;
 import com.ds.pubsub.proto.Node;
 import com.ds.pubsub.server.services.LeaderElectionService;
 import com.ds.pubsub.server.state.Cluster;
-
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 public class PubSubServer {
-    private final Logger log = LoggerFactory.getLogger(PubSubServer.class);
+    private final static Logger log = LoggerFactory.getLogger(PubSubServer.class);
 
     Cluster cluster;
     RaftLeaderElection leaderElection;

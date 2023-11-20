@@ -9,8 +9,12 @@
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     id 'application'
-    id 'com.google.protobuf' version '0.8.18'
+    id "com.google.protobuf" version "0.9.3"
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id "java"
 }
+
+project.setProperty("mainClassName", "")
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -39,17 +43,19 @@ dependencies {
 
     // This dependency is used by the application.
     implementation 'com.google.guava:guava:31.1-jre'
-    runtimeOnly 'io.grpc:grpc-netty-shaded:1.49.2'
-    implementation 'io.grpc:grpc-protobuf:1.49.2'
-    implementation 'io.grpc:grpc-stub:1.49.2'
+    
+    implementation "io.grpc:grpc-protobuf:1.58.0"
+    runtimeOnly 'io.grpc:grpc-netty-shaded:1.58.0'
+    implementation 'io.grpc:grpc-stub:1.58.0'
+
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
     implementation 'org.apache.logging.log4j:log4j-api:2.7'
     implementation 'org.apache.logging.log4j:log4j-core:2.7'
     implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.7'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.0'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.0'
-    implementation 'org.projectlombok:lombok:1.18.24'
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    implementation 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
 }
 
 tasks.named('test') {
@@ -57,12 +63,6 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-task customFatJar(type: Jar) {
-    manifest {
-        attributes 'Main-Class': ''
-    }
-    archiveBaseName = 'all-in-one-jar'
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
+shadowJar {
+    mergeServiceFiles()
 }

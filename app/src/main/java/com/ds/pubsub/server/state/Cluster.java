@@ -31,12 +31,15 @@ public class Cluster {
     private static final Logger logger = LoggerFactory.getLogger(Cluster.class);
 
     private final Node currentNode;
-    private final List<Node> clusterNodes;
+    private final List<Node> otherClusterNodes;
+    private final List<Node> allNodes;
     private Map<String, ManagedChannel> channelMap;
 
-    public Cluster(List<Node> clusterNodes, Node currentNode) {
-      this.clusterNodes = clusterNodes;
+    public Cluster(List<Node> otherClusterNodes, Node currentNode) {
+      this.otherClusterNodes = otherClusterNodes;
       this.currentNode = currentNode;
+      this.allNodes = new ArrayList<>(otherClusterNodes);
+      allNodes.add(currentNode);
       this.channelMap = new HashMap<>();
     }
 
@@ -44,12 +47,16 @@ public class Cluster {
       return currentNode;
     }
 
-    public List<Node> getClusterNodes() {
-      return this.clusterNodes;
+    public List<Node> getOtherClusterNodes() {
+      return this.otherClusterNodes;
+    }
+
+    public int getNodeCount() {
+      return this.allNodes.size();
     }
 
     public Node getLeaderNode(String id) {
-      return getClusterNodes().stream()
+      return this.allNodes.stream()
           .filter(node -> node.getId().equals(id))
           .collect(Collectors.toList())
           .get(0);
@@ -69,6 +76,7 @@ public class Cluster {
       try {
         response = stub.sendHeartbeat(request);
       } catch (Exception e) {
+        logger.debug("", e);
         channelMap.get(node.getId()).shutdown();
         channelMap.remove(node.getId());
       }
@@ -88,7 +96,7 @@ public class Cluster {
     try {
       response = stub.requestVote(request);
     } catch (Exception e) {
-      // log.error(e.getMessage(), e);
+      logger.debug(e.getMessage(), e);
       channelMap.get(node.getId()).shutdown();
       channelMap.remove(node.getId());
     }
@@ -96,7 +104,7 @@ public class Cluster {
     return response;
   }
 
-    private ManagedChannel getChannel(Node node) {
+    public ManagedChannel getChannel(Node node) {
       if (!channelMap.containsKey(node.getId())) {
         ManagedChannel channel =
             ManagedChannelBuilder.forAddress(node.getIp(), node.getPort()).usePlaintext().build();
@@ -110,7 +118,7 @@ public class Cluster {
       System.out.printf("Current node host: %s%n", hostIpAddress.getHostAddress());
 
       Node currentNode = null, tmpNode;
-      List<Node> cluster = new ArrayList<>();
+      List<Node> otherClusterNodes = new ArrayList<>();
       for (Host node : nodes) {
         tmpNode =
             Node.newBuilder()
@@ -124,12 +132,12 @@ public class Cluster {
         if (node.getIp().equals(hostIpAddress.getHostAddress()) && node.getPort() == currentPort) {
           currentNode = tmpNode;
         } else {
-          cluster.add(tmpNode);
+          otherClusterNodes.add(tmpNode);
         }
       }
       if (currentNode == null)
         throw new RuntimeException("No node ip matches current running host ip");
-      return new Cluster(cluster, currentNode);
+      return new Cluster(otherClusterNodes, currentNode);
     }
 
     public static InetAddress getLocalIpAddress() {
